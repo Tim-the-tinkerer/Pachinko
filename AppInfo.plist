@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>Pachinko</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.pachinko.parlor</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Pachinko</string>
+    <key>CFBundleDisplayName</key>
+    <string>Pachinko</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.9</string>
+    <key>CFBundleVersion</key>
+    <string>10</string>
+    <key>CFBundleGetInfoString</key>
+    <string>Pachinko 1.0.9 — Hanabi Fever parlor</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026.</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+</dict>
+</plist>

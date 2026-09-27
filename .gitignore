@@ -1,0 +1,48 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Built app bundle (assemble with ./build-app.sh)
+Pachinko.app/
+
+# Xcode (if opened as a package)
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Editors
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*~
+.history/
+
+# Logs and temp
+*.log
+*.tmp
+*.bak
+.cache/
+
+# Test and coverage
+*.xcresult
+coverage/
+*.profraw
+*.profdata
