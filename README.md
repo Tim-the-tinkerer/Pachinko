@@ -1,6 +1,6 @@
 # Pachinko
 
-**Version 1.0.9** — a native macOS pachinko parlor written in Swift.
+**Version 1.0.13** — a native macOS pachinko parlor written in Swift.
 
 Crank the handle, rain steel balls through a field of nails, and chase **7-7-7** for **FEVER**. Six cabinets. Sakura keeps the classic nail field. Every other cabinet moves the wheel, the nails, or both, and each one has its own backdrop and tune.
 
@@ -37,9 +37,11 @@ Hit the **START** hole to spin the digital reels. Sevens start Fever: the **atta
 | `P` | Pause |
 | `Esc` | Menu |
 | `T` | Cycle cabinet |
+| Settings | Screen mode, difficulty, CRT glass, music, sound effects, and cabinet wear |
+| `Command-F` | Enter or leave full screen |
 | `C` | Toggle CRT |
 | `M` | Toggle music |
-| `1` `2` `3` | Difficulty (menu) |
+| `1` `2` `3` | Difficulty (menu or Settings) |
 
 On the classic boards, the middle of the handle drops over the start hole. Lantern Alley keeps that hole to the right.
 
@@ -52,6 +54,16 @@ On the classic boards, the middle of the handle drops over the start hole. Lante
 | **Insane** | 75 | tight | 3.5% · 8 rounds | slower |
 
 Every nail gap, including the start-hole lips and the space beside the side walls, is wider than a ball. Insane is the narrow shot; Novice is the wide one. The closed attacker lid is a peak, so a ball slides off instead of sitting on it.
+
+## Screen
+
+Settings chooses **Window** or **Full screen**. Full screen fills the display. The green window button and `Command-F` do the same thing, and the choice is saved for the next launch.
+
+## Cabinet wear
+
+With wear turned on, each cabinet keeps a count of the balls you play through it. The frame shows light scratches from the start, and they get easier to see after a long run. The wheel also settles: Dragon and Koi slow down a little, Neon, Lantern, and River speed up a little, and Sakura's wheel does not drift. Nail gaps and payouts stay the same.
+
+Settings can turn wear off. The scratches hide and the wheel goes back to its normal speed. Reset wear clears the count on every cabinet, so they all look and spin like new the next time wear is on.
 
 ## Build & run
 

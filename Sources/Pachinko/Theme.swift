@@ -64,6 +64,12 @@ enum CabinetWear {
         UserDefaults.standard.set(n, forKey: k)
         return n
     }
+
+    static func resetAll() {
+        for theme in CabinetTheme.allCases {
+            UserDefaults.standard.removeObject(forKey: key(theme))
+        }
+    }
 }
 
 extension CabinetTheme {
@@ -286,10 +292,20 @@ final class DisplaySettings: ObservableObject {
         didSet { UserDefaults.standard.set(difficulty.rawValue, forKey: Self.diffKey) }
     }
 
+    @Published var wearEnabled: Bool {
+        didSet { UserDefaults.standard.set(wearEnabled, forKey: Self.wearKey) }
+    }
+
+    @Published var windowMode: WindowMode {
+        didSet { UserDefaults.standard.set(windowMode.rawValue, forKey: Self.windowModeKey) }
+    }
+
     private static let themeKey = "pachinko.cabinetTheme"
     private static let crtKey = "pachinko.crtEnabled"
     private static let musicKey = "pachinko.musicEnabled"
     private static let diffKey = "pachinko.difficulty"
+    private static let wearKey = "pachinko.wearEnabled"
+    private static let windowModeKey = "pachinko.windowMode"
 
     var palette: ColorPalette { ColorPalette.make(theme: cabinetTheme) }
 
@@ -316,6 +332,29 @@ final class DisplaySettings: ObservableObject {
         } else {
             difficulty = .arcade
         }
+        if UserDefaults.standard.object(forKey: Self.wearKey) == nil {
+            wearEnabled = true
+        } else {
+            wearEnabled = UserDefaults.standard.bool(forKey: Self.wearKey)
+        }
+        if let raw = UserDefaults.standard.string(forKey: Self.windowModeKey),
+           let mode = WindowMode(rawValue: raw) {
+            windowMode = mode
+        } else {
+            windowMode = .window
+        }
+    }
+
+    func selectWindowMode(_ mode: WindowMode) {
+        guard windowMode != mode else { return }
+        windowMode = mode
+        NotificationCenter.default.post(name: .pachinkoApplyWindowMode, object: nil)
+        GameSound.shared.uiClick()
+    }
+
+    func toggleWear() {
+        wearEnabled.toggle()
+        GameSound.shared.uiClick()
     }
 
     func cycleCabinet() {
@@ -334,6 +373,15 @@ final class DisplaySettings: ObservableObject {
         musicEnabled.toggle()
         if musicEnabled { GameSound.shared.uiClick() }
     }
+}
+
+enum WindowMode: String {
+    case window
+    case fullScreen
+}
+
+extension Notification.Name {
+    static let pachinkoApplyWindowMode = Notification.Name("pachinkoApplyWindowMode")
 }
 
 enum PachinkoTheme {

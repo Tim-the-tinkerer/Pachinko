@@ -281,8 +281,12 @@ struct KeyEventHandler: NSViewRepresentable {
 
     func updateNSView(_ nsView: KeyCatcherView, context: Context) {
         nsView.engine = engine
+        guard nsView.window?.isKeyWindow == true, NSApp.modalWindow == nil else { return }
         if nsView.window?.firstResponder !== nsView {
-            DispatchQueue.main.async { nsView.window?.makeFirstResponder(nsView) }
+            DispatchQueue.main.async {
+                guard nsView.window?.isKeyWindow == true, NSApp.modalWindow == nil else { return }
+                nsView.window?.makeFirstResponder(nsView)
+            }
         }
     }
 }
@@ -298,9 +302,16 @@ final class KeyCatcherView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            super.keyDown(with: event)
+            return
+        }
         if event.isARepeat && !Self.isHeld(event) { return }
         let key = Self.mapKey(event)
+        let repeated = event.isARepeat
         Task { @MainActor in
+            // Holding Space to fire also repeats. That repeat must not cancel Pause.
+            if repeated, engine?.phase == .paused, key == " " || key == "return" { return }
             if engine?.phase == .enteringScore {
                 engine?.handleKeyDown(key)
                 return
@@ -330,6 +341,10 @@ final class KeyCatcherView: NSView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // Command shortcuts belong to the menus: Minimize, full screen, sound.
+        if event.modifierFlags.contains(.command) {
+            return super.performKeyEquivalent(with: event)
+        }
         if Self.isGameKey(event) {
             keyDown(with: event)
             return true

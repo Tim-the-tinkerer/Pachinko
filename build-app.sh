@@ -17,7 +17,7 @@ if [[ ! -f Assets/AppIcon.icns ]]; then
     swift Scripts/GenerateAppIcon.swift
 fi
 
-VERSION="1.0.9"
+VERSION="1.0.13"
 echo "Building Pachinko ${VERSION} (release)..."
 swift build -c release
 

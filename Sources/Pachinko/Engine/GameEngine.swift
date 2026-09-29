@@ -35,6 +35,8 @@ final class GameEngine: ObservableObject {
     @Published var feverHits: Int = 0
     @Published var spinning: Bool = false
     @Published var reach: Bool = false
+    @Published var showingSettings = false
+    @Published var confirmWearReset = false
 
     var showsMenuUI: Bool { phase == .menu || phase == .attract }
 
@@ -54,7 +56,9 @@ final class GameEngine: ObservableObject {
     private var feverGateTimer: Double = 0
     private var feverGateOpen = false
     private var feverSpark: Double = 0
-    private var attackerBurstID = 0
+    /// Advances only while the round is running, so a pause holds the attacker bonus.
+    private var playClock = 0.0
+    private var attackerCloseAt: Double?
     private var attractClock = 0.0
     private var handleGrab: Double?
     private var simBusy = false
@@ -63,8 +67,7 @@ final class GameEngine: ObservableObject {
 
     init() {
         board = BoardDef.make(DisplaySettings.shared.cabinetTheme, difficulty: DisplaySettings.shared.difficulty)
-        cabinetWear = CabinetWear.amount(board.theme)
-        board.windmill.speed *= board.theme.wornMillScale(cabinetWear)
+        applyWearPresentation()
         startLoop()
         show("HANABI FEVER", dmd: board.theme.tagline.uppercased(), hold: 3)
         seedPetals(24)
@@ -96,7 +99,9 @@ final class GameEngine: ObservableObject {
         var dt = now.timeIntervalSince(lastTick)
         lastTick = now
         if dt > 0.05 { dt = 0.05 }
+        if phase == .paused { return }
         elapsed += dt
+        playClock += dt
 
         if shake > 0 { shake = max(0, shake - dt * 5) }
         if launchKick > 0 { launchKick = max(0, launchKick - dt * 5.5) }
@@ -111,6 +116,7 @@ final class GameEngine: ObservableObject {
         updateRailStreaks(dt: dt)
         updateReels(dt: dt)
         updateFever(dt: dt)
+        updateAttackerBurst()
 
         switch phase {
         case .menu:
@@ -178,12 +184,14 @@ final class GameEngine: ObservableObject {
         if result.shots > 0 {
             if !isAttractMode {
                 tray = max(0, tray - result.shots)
-                let n = CabinetWear.noteShot(board.theme)
-                let wear = min(1, Double(n) / 520)
-                if abs(wear - cabinetWear) > 0.015 { cabinetWear = wear }
-                if n % 40 == 0 {
-                    let base = FieldPlan.make(board.theme).millSpeed
-                    board.windmill.speed = base * board.theme.wornMillScale(wear)
+                if DisplaySettings.shared.wearEnabled {
+                    let n = CabinetWear.noteShot(board.theme)
+                    let wear = min(1, Double(n) / 520)
+                    if abs(wear - cabinetWear) > 0.015 { cabinetWear = wear }
+                    if n % 40 == 0 {
+                        let base = FieldPlan.make(board.theme).millSpeed
+                        board.windmill.speed = base * board.theme.wornMillScale(wear)
+                    }
                 }
             }
             launchKick = 1
@@ -201,6 +209,19 @@ final class GameEngine: ObservableObject {
             resolvePocket(pocketIndex)
         }
         if phase == .playing { maybeGameOver() }
+    }
+
+    func applyWearPresentation() {
+        let enabled = DisplaySettings.shared.wearEnabled
+        let wear = enabled ? CabinetWear.amount(board.theme) : 0
+        cabinetWear = wear
+        let base = FieldPlan.make(board.theme).millSpeed
+        board.windmill.speed = base * (enabled ? board.theme.wornMillScale(wear) : 1)
+    }
+
+    func resetCabinetWear() {
+        CabinetWear.resetAll()
+        applyWearPresentation()
     }
 
     private func invalidateWorld() {
@@ -400,11 +421,12 @@ final class GameEngine: ObservableObject {
             pay(3, at: Vec(x: 186, y: 120), label: "+3")
             show("STAR", dmd: "LUCKY 3", hold: 1.6)
             GameSound.shared.fanfare()
+        } else if a == .seven && b == .seven {
+            // A blank third still matches the pair shape. Reach is a miss either way.
+            dmdLine = "REACH"
         } else if a == b && a != .blank && c == .blank {
             pay(2, at: Vec(x: 186, y: 120), label: "+2")
             GameSound.shared.pocket()
-        } else if a == .seven && b == .seven {
-            dmdLine = "REACH"
         } else {
             dmdLine = fever ? "FEVER" : "HAZURE"
         }
@@ -481,14 +503,15 @@ final class GameEngine: ObservableObject {
     }
 
     private func openAttackerBurst(_ seconds: Double) {
-        attackerBurstID += 1
-        let token = attackerBurstID
         setAttacker(true)
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            guard self.attackerBurstID == token, !self.fever else { return }
-            self.setAttacker(false)
-        }
+        attackerCloseAt = playClock + seconds
+    }
+
+    private func updateAttackerBurst() {
+        guard let closeAt = attackerCloseAt, playClock >= closeAt else { return }
+        attackerCloseAt = nil
+        // Fever owns the gate. An older BAR window must not shut it.
+        if !fever { setAttacker(false) }
     }
 
     // MARK: - Game flow
@@ -498,8 +521,7 @@ final class GameEngine: ObservableObject {
         isAttractMode = false
         difficulty = DisplaySettings.shared.difficulty
         board = BoardDef.make(DisplaySettings.shared.cabinetTheme, difficulty: difficulty)
-        cabinetWear = CabinetWear.amount(board.theme)
-        board.windmill.speed *= board.theme.wornMillScale(cabinetWear)
+        applyWearPresentation()
         balls.removeAll()
         particles.removeAll()
         floatScores.removeAll()
@@ -520,10 +542,12 @@ final class GameEngine: ObservableObject {
         feverGateOpen = false
         feverGateTimer = 0
         feverSpark = 0
-        attackerBurstID += 1
+        attackerCloseAt = nil
+        confirmWearReset = false
         handlePower = 0.62
         reels = [Reel(display: .seven), Reel(display: .seven), Reel(display: .seven)]
         phase = .playing
+        showingSettings = false
         stuckTime.removeAll()
         seedPetals(18)
         show("GOOD LUCK", dmd: "\(tray) BALLS", hold: 2)
@@ -533,9 +557,17 @@ final class GameEngine: ObservableObject {
 
     func applySelectedTable() {
         invalidateWorld()
-        board = BoardDef.make(DisplaySettings.shared.cabinetTheme, difficulty: DisplaySettings.shared.difficulty)
-        cabinetWear = CabinetWear.amount(board.theme)
-        board.windmill.speed *= board.theme.wornMillScale(cabinetWear)
+        // The demo stays on the Arcade field. A new cabinet must not inherit the previous balls.
+        let layout = isAttractMode ? Difficulty.arcade : DisplaySettings.shared.difficulty
+        board = BoardDef.make(DisplaySettings.shared.cabinetTheme, difficulty: layout)
+        applyWearPresentation()
+        if isAttractMode {
+            balls.removeAll()
+            stuckTime.removeAll()
+            fireCool = 0
+            railStreaks.removeAll()
+            handlePower = attractPower(forX: attractChuckerX())
+        }
         GameSound.shared.setMusicContext(menu: true, fever: false, theme: board.theme)
     }
 
@@ -546,11 +578,16 @@ final class GameEngine: ObservableObject {
         fever = false
         spinning = false
         setAttacker(false)
-        attackerBurstID += 1
+        attackerCloseAt = nil
         feverGateOpen = false
         feverGateTimer = 0
         fireCool = 0
         balls.removeAll()
+        let theme = DisplaySettings.shared.cabinetTheme
+        if board.theme != theme {
+            board = BoardDef.make(theme, difficulty: DisplaySettings.shared.difficulty)
+            applyWearPresentation()
+        }
         phase = .menu
         attractIdle = 0
         menuInputLock = 0.35
@@ -564,8 +601,7 @@ final class GameEngine: ObservableObject {
         isAttractMode = true
         phase = .attract
         board = BoardDef.make(DisplaySettings.shared.cabinetTheme, difficulty: .arcade)
-        cabinetWear = CabinetWear.amount(board.theme)
-        board.windmill.speed *= board.theme.wornMillScale(cabinetWear)
+        applyWearPresentation()
         balls.removeAll()
         tray = 200
         firing = false
@@ -679,6 +715,8 @@ final class GameEngine: ObservableObject {
         switch key {
         case " ", "return":
             if showsMenuUI {
+                if showingSettings { return }
+                confirmWearReset = false
                 startGame()
             } else if phase == .gameOver {
                 backToMenu()
@@ -688,7 +726,11 @@ final class GameEngine: ObservableObject {
                 pauseToggle()
             }
         case "escape":
-            if phase == .playing || phase == .paused || phase == .gameOver {
+            if showsMenuUI && showingSettings {
+                showingSettings = false
+                confirmWearReset = false
+                GameSound.shared.uiClick()
+            } else if phase == .playing || phase == .paused || phase == .gameOver {
                 backToMenu()
             }
         case "p":

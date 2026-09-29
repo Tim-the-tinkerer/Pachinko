@@ -55,20 +55,118 @@ struct MenuView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 2))
                 }
 
-                LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
-                    spacing: 8
-                ) {
-                    ForEach(CabinetTheme.allCases) { theme in
-                        cabinetCard(theme)
-                    }
+                if engine.showingSettings {
+                    settingsPanel
+                } else {
+                    parlorPicker
                 }
-                .padding(.horizontal, 8)
 
-                HStack(spacing: 8) {
-                    Text("DIFFICULTY")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                if !engine.showingSettings {
+                    VStack(alignment: .leading, spacing: 5) {
+                        controlRow("HOLD SPACE / CLICK", "Fire balls  ·  handle sets the drop line")
+                        controlRow("← →  or  A D", "Handle power. Classic boards favor the middle")
+                        controlRow("T    P / ESC", "Cabinet    Pause / menu")
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(palette.panel.opacity(0.82))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(palette.gold.opacity(0.35), lineWidth: 1)
+                            )
+                    )
+
+                    highScorePanel
+
+                    Button {
+                        engine.showingSettings = true
+                        GameSound.shared.uiClick()
+                    } label: {
+                        Text("SETTINGS")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(palette.gold)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .stroke(palette.gold.opacity(0.7), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    Text(settingsSummary)
+                        .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(palette.hudDim)
+
+                    Button {
+                        engine.startGame()
+                    } label: {
+                        Text("PRESS ENTER / SPACE — START")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundStyle(palette.void)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 12)
+                            .background(palette.gold)
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                            .shadow(color: palette.gold.opacity(0.45), radius: 12)
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer().frame(height: 10)
+                }
+            }
+            .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private var parlorPicker: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+            spacing: 8
+        ) {
+            ForEach(CabinetTheme.allCases) { theme in
+                cabinetCard(theme)
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+
+    private var settingsSummary: String {
+        let crt = settings.crtEnabled ? "CRT ON" : "CRT OFF"
+        let music = settings.musicEnabled ? "MUSIC ON" : "MUSIC OFF"
+        let sfx = sound.enabled ? "SFX ON" : "SFX OFF"
+        let wear = settings.wearEnabled ? "WEAR ON" : "WEAR OFF"
+        let screen = settings.windowMode == .fullScreen ? "FULL SCREEN" : "WINDOW"
+        return "\(screen)  ·  \(settings.difficulty.shortName)  ·  \(crt)  ·  \(music)  ·  \(sfx)  ·  \(wear)"
+    }
+
+    private var settingsPanel: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("SETTINGS")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(palette.gold)
+                .tracking(3)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("SCREEN")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(palette.hudDim)
+                HStack(spacing: 8) {
+                    screenModeButton("WINDOW", mode: .window)
+                    screenModeButton("FULL SCREEN", mode: .fullScreen)
+                }
+                Text("Full screen fills this display. Command-F does the same.")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(palette.text.opacity(0.8))
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("DIFFICULTY")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(palette.hudDim)
+                HStack(spacing: 8) {
                     ForEach(Difficulty.allCases) { diff in
                         Button {
                             settings.difficulty = diff
@@ -76,10 +174,10 @@ struct MenuView: View {
                             GameSound.shared.uiClick()
                         } label: {
                             Text(diff.shortName)
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
                                 .foregroundStyle(settings.difficulty == diff ? palette.void : palette.gold)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
                                 .background(
                                     RoundedRectangle(cornerRadius: 3)
                                         .fill(settings.difficulty == diff ? palette.gold : palette.panel.opacity(0.85))
@@ -91,54 +189,159 @@ struct MenuView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    Text("1 · 2 · 3")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(palette.hudDim.opacity(0.7))
                 }
+                Text(settings.difficulty.settingsBlurb)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(palette.text.opacity(0.8))
+                Text("Keys 1 · 2 · 3")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(palette.hudDim.opacity(0.7))
+            }
 
-                VStack(alignment: .leading, spacing: 5) {
-                    controlRow("HOLD SPACE / CLICK", "Fire balls  ·  handle sets the drop line")
-                    controlRow("← →  or  A D", "Handle power. Classic boards favor the middle")
-                    controlRow("T / C / M    P / ESC", "Cabinet  ·  CRT  ·  Music    Pause")
+            settingsToggle(
+                title: "CRT GLASS",
+                detail: "Scanlines and vignette over the board",
+                on: settings.crtEnabled,
+                key: "C"
+            ) {
+                settings.toggleCRT()
+            }
+            settingsToggle(
+                title: "MUSIC",
+                detail: "Cabinet tune and Fever track",
+                on: settings.musicEnabled,
+                key: "M"
+            ) {
+                settings.toggleMusic()
+            }
+            settingsToggle(
+                title: "SOUND EFFECTS",
+                detail: "Nails, pockets, reels, and the launcher",
+                on: sound.enabled,
+                key: ""
+            ) {
+                sound.toggle()
+            }
+            settingsToggle(
+                title: "CABINET WEAR",
+                detail: "Scratches on the frame, and a slow drift in the wheel",
+                on: settings.wearEnabled,
+                key: ""
+            ) {
+                settings.toggleWear()
+                engine.applyWearPresentation()
+                engine.confirmWearReset = false
+            }
+
+            Button {
+                if engine.confirmWearReset {
+                    engine.resetCabinetWear()
+                    engine.confirmWearReset = false
+                    GameSound.shared.uiClick()
+                } else {
+                    engine.confirmWearReset = true
+                    GameSound.shared.uiClick()
                 }
-                .padding(12)
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(engine.confirmWearReset ? "CONFIRM RESET" : "RESET WEAR")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(engine.confirmWearReset ? palette.void : palette.gold)
+                    Text("Clears the marks and wheel drift on every cabinet")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(engine.confirmWearReset ? palette.void.opacity(0.8) : palette.hudDim)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(palette.panel.opacity(0.82))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(palette.gold.opacity(0.35), lineWidth: 1)
-                        )
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(engine.confirmWearReset ? palette.danger : palette.panel)
+                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(palette.gold.opacity(0.45), lineWidth: 1))
                 )
+            }
+            .buttonStyle(.plain)
 
-                HStack(spacing: 12) {
-                    toggleChip(title: settings.crtEnabled ? "CRT ON" : "CRT OFF", active: settings.crtEnabled) {
-                        settings.toggleCRT()
-                    }
-                    toggleChip(title: settings.musicEnabled ? "MUSIC ON" : "MUSIC OFF", active: settings.musicEnabled) {
-                        settings.toggleMusic()
-                    }
-                    toggleChip(title: sound.enabled ? "SFX ON" : "SFX OFF", active: sound.enabled) {
-                        sound.toggle()
-                    }
-                }
-
-                highScorePanel
-
-                Text("PRESS ENTER / SPACE — START")
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+            Button {
+                engine.showingSettings = false
+                engine.confirmWearReset = false
+                GameSound.shared.uiClick()
+            } label: {
+                Text("DONE  ·  ESC")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundStyle(palette.void)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 8)
                     .background(palette.gold)
                     .clipShape(RoundedRectangle(cornerRadius: 3))
-                    .shadow(color: palette.gold.opacity(0.45), radius: 12)
-
-                Spacer().frame(height: 10)
             }
-            .padding(.horizontal, 20)
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .frame(maxWidth: 520, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(palette.panel.opacity(0.94))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(palette.gold.opacity(0.45), lineWidth: 1)
+                )
+        )
+    }
+
+    private func screenModeButton(_ title: String, mode: WindowMode) -> some View {
+        let selected = settings.windowMode == mode
+        return Button {
+            settings.selectWindowMode(mode)
+        } label: {
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(selected ? palette.void : palette.gold)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(selected ? palette.gold : palette.panel.opacity(0.85))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(palette.gold.opacity(0.5), lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func settingsToggle(title: String, detail: String, on: Bool, key: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(palette.text)
+                    Text(detail)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(palette.hudDim)
+                }
+                Spacer(minLength: 12)
+                if !key.isEmpty {
+                    Text(key)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(palette.hudDim)
+                }
+                Text(on ? "ON" : "OFF")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(on ? palette.void : palette.gold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(on ? palette.gold : palette.panel)
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(palette.gold.opacity(0.45), lineWidth: 1))
+                    )
             }
         }
+        .buttonStyle(.plain)
     }
 
     private func cabinetCard(_ theme: CabinetTheme) -> some View {
@@ -192,19 +395,6 @@ struct MenuView: View {
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(palette.text.opacity(0.8))
         }
-    }
-
-    private func toggleChip(title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(active ? palette.void : palette.hud)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: 3).fill(active ? palette.gold : palette.panel))
-                .overlay(RoundedRectangle(cornerRadius: 3).stroke(palette.gold.opacity(0.45), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 
     private var highScorePanel: some View {

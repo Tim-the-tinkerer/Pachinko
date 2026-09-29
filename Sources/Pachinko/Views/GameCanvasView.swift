@@ -122,6 +122,7 @@ struct GameCanvasView: View {
     }
 
     private func drawCabinetWear(context: inout GraphicsContext, L: TableLayoutScale, frame: CGRect) {
+        guard DisplaySettings.shared.wearEnabled else { return }
         let wear = 0.28 + engine.cabinetWear * 0.72
         let seed = engine.board.theme.rawValue.unicodeScalars.reduce(0.0) { $0 + Double($1.value) }
         for i in 0..<6 {

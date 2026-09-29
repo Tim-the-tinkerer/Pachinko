@@ -59,6 +59,14 @@ enum Difficulty: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    var settingsBlurb: String {
+        switch self {
+        case .novice: return "125 balls · wider start hole · Fever 9% · faster fire"
+        case .arcade: return "100 balls · normal start hole · Fever 5.5%"
+        case .insane: return "75 balls · tight start hole · Fever 3.5% · slower fire"
+        }
+    }
+
     var fireInterval: Double {
         switch self {
         case .novice: return 0.16
@@ -235,6 +243,7 @@ final class HighScoreStore: ObservableObject {
         }
         if entries.count > Self.maxEntries {
             entries = Array(entries.prefix(Self.maxEntries))
+            save()
         }
     }
 

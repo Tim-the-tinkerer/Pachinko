@@ -38,7 +38,7 @@ final class GameSound: ObservableObject {
         for fx in SoundFX.allCases {
             _ = wavData(for: fx)
         }
-        for track in [MusicTrack.menu, .sakura, .dragon, .neon, .fever] {
+        for track in [MusicTrack.menu, .sakura, .dragon, .neon, .koi, .lantern, .river, .fever] {
             _ = musicWAV(for: track)
         }
     }
@@ -106,8 +106,7 @@ final class GameSound: ObservableObject {
         if currentMusic == track, musicPlayer?.isPlaying == true { return }
         currentMusic = track
         guard enabled, DisplaySettings.shared.musicEnabled else {
-            musicPlayer?.stop()
-            musicPlayer = nil
+            stopMusic()
             return
         }
         guard let data = musicWAV(for: track) else { return }

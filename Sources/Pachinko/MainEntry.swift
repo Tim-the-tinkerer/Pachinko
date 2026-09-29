@@ -14,6 +14,8 @@ struct MainEntry {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
+    /// True while a Settings choice is animating, so the system notification does not overwrite it.
+    private var windowModeApplyInFlight = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMainMenu()
@@ -31,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = "Pachinko"
         window.contentView = hosting
         window.minSize = NSSize(width: 560, height: 760)
+        window.collectionBehavior = [.fullScreenPrimary, .fullScreenAllowsTiling]
         window.center()
         window.setFrameAutosaveName("PachinkoMainWindow")
         window.isReleasedWhenClosed = false
@@ -38,6 +41,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applySavedWindowMode),
+            name: .pachinkoApplyWindowMode,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidEnterFullScreen(_:)),
+            name: NSWindow.didEnterFullScreenNotification,
+            object: window
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidExitFullScreen(_:)),
+            name: NSWindow.didExitFullScreenNotification,
+            object: window
+        )
+        if DisplaySettings.shared.windowMode == .fullScreen {
+            DispatchQueue.main.async { [weak self, weak window] in
+                guard let self, let window else { return }
+                guard !window.styleMask.contains(.fullScreen) else { return }
+                self.windowModeApplyInFlight = true
+                window.toggleFullScreen(nil)
+            }
+        }
 
         Task { @MainActor in
             GameSound.shared.setMusicContext(menu: true, fever: false, theme: DisplaySettings.shared.cabinetTheme)
@@ -130,6 +159,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = mainMenu
     }
 
+    @MainActor
+    @objc private func applySavedWindowMode() {
+        guard let window else { return }
+        let wantsFull = DisplaySettings.shared.windowMode == .fullScreen
+        let isFull = window.styleMask.contains(.fullScreen)
+        guard wantsFull != isFull else { return }
+        windowModeApplyInFlight = true
+        window.toggleFullScreen(nil)
+    }
+
+    @MainActor
+    @objc private func windowDidEnterFullScreen(_ notification: Notification) {
+        reconcileWindowMode(isFull: true)
+    }
+
+    @MainActor
+    @objc private func windowDidExitFullScreen(_ notification: Notification) {
+        reconcileWindowMode(isFull: false)
+    }
+
+    @MainActor
+    private func reconcileWindowMode(isFull: Bool) {
+        if windowModeApplyInFlight {
+            windowModeApplyInFlight = false
+            let wantsFull = DisplaySettings.shared.windowMode == .fullScreen
+            if wantsFull != isFull {
+                windowModeApplyInFlight = true
+                window?.toggleFullScreen(nil)
+            }
+            return
+        }
+        let mode: WindowMode = isFull ? .fullScreen : .window
+        if DisplaySettings.shared.windowMode != mode {
+            DisplaySettings.shared.windowMode = mode
+        }
+    }
+
     @objc private func toggleSound(_ sender: Any?) {
         Task { @MainActor in GameSound.shared.toggle() }
     }
@@ -151,7 +217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showHelp(_ sender: Any?) {
         let alert = NSAlert()
-        alert.messageText = "Pachinko 1.0.9"
+        alert.messageText = "Pachinko 1.0.13"
         alert.informativeText = """
         A Japanese parlor machine. Crank the handle, rain steel balls through the nails, and aim for the start hole.
 
@@ -159,9 +225,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         START hole spins the digital reels. 7-7-7 starts FEVER: the attacker gate opens in rounds and pays a pile of balls. Side tulips pay a couple back. Miss the board and the ball is gone. Ordinary play spends the tray. Fever fills it again.
 
+        Settings, on the main screen, holds the screen mode, difficulty, CRT glass, music, sound effects, and cabinet wear.
+        Window keeps Pachinko in a resizable window. Full screen fills the display. Command-F switches too, and the choice is remembered.
+
+        Cabinet wear marks the frame the more you play a machine, and the wheel drifts a little. Dragon and Koi slow down. Neon, Lantern, and River speed up. Sakura's wheel stays put. Settings can turn wear off or reset every cabinet.
         T — cycle cabinet (six boards: classic, garden, alley, river)
         C — CRT glass  ·  M — music
-        P — pause  ·  Esc — menu
+        P — pause  ·  Esc — menu, or leave Settings
         1 / 2 / 3 — Novice / Arcade / Insane
 
         Arcade entertainment — no cash, just the tray.

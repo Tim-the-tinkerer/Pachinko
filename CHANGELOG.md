@@ -5,6 +5,45 @@ All notable changes to **Pachinko** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.13] - 2026-09-28
+
+### Fixed
+
+- Two sevens and a miss, including a blank third reel, is a reach and does not pay.
+- Pause freezes the reels, Fever, and a BAR attacker window. Holding Space to fire no longer resumes on the key repeat.
+- Switching cabinets during the demo clears the balls already on the field and keeps the Arcade layout. Leaving a game shows the cabinet chosen from the View menu.
+- Command-M minimizes, and Command-Shift-M toggles sound effects. The Help alert keeps the keyboard.
+- Closing Settings disarms Reset Wear. The start plaque on the main screen starts a game.
+- A full-screen choice made while the window is still animating stays on the mode you picked.
+- The music player is kept until it has finished, including when music is turned off mid-track.
+
+---
+
+## [1.0.12] - 2026-09-27
+
+### Added
+
+- Full screen. Settings chooses window or full screen, and that choice is remembered. Command-F and the green window button use the same mode.
+
+---
+
+## [1.0.11] - 2026-09-27
+
+### Changed
+
+- Help and the readme describe cabinet and wheel wear.
+- Settings can turn wear off, which hides the scratches and puts the wheel back to its normal speed, or reset the wear on every cabinet.
+
+---
+
+## [1.0.10] - 2026-09-27
+
+### Changed
+
+- The main screen has a Settings panel. Difficulty, CRT glass, music, and sound effects live there. The cabinet list stays on the parlor screen.
+
+---
+
 ## [1.0.9] - 2026-09-27
 
 ### Fixed
